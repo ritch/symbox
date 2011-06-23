@@ -1,0 +1,18 @@
+{
+	"author": "Ritchie Martori",
+	"name": "symbox",
+	"description": "Simplifies symlinking folders in Dropbox",
+	"version": "0.0.0",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/ritch/symbox.git"
+	},
+	"engines": {
+		"node": ">= 0.4.7"
+	},
+	"bin":{
+		"symbox":"symbox"
+	},
+	"dependencies": ["hive"],
+	"devDependencies": {}
+}

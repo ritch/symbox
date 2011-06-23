@@ -1,0 +1,8 @@
+{
+	"root": "~/Dropbox",
+	"sync": {
+		// provide a key of the relative folder path to the dropbox root
+		// and a value of the folder on the current computer
+		// "foo": "~/Desktop/foo"
+	}
+}

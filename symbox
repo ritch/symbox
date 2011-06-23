@@ -1,0 +1,110 @@
+#!/usr/bin/env node
+
+var hive = require('hive'),
+	exec = require('child_process').exec;
+
+var art = '' +
+'\n                     ___.                  '        +
+'\n  _________.__. _____\\_ |__   _______  ___ '       +
+'\n /  ___<   |  |/     \\| __ \\ /  _ \\  \\/  / '    +
+'\n \\___ \\ \\___  |  Y Y  \\ \\_\\ (  <_> >    <  '  +
+'\n/____  >/ ____|__|_|  /___  /\\____/__/\\_ \\ '     +
+'\n     \\/ \\/          \\/    \\/            \\/ ';  
+
+
+// symbox is a script that lets you symlink folders without thinking about it
+
+// locate your symbox config by running $ symbox --config
+
+var args = process.argv;
+var home = process.env.HOME;
+var configFile = 'symbox.config.json';
+var configPath = home + '/' + configFile;
+
+if(args.indexOf('--config') > -1) {
+	console.log(configPath);
+} else {
+	cli
+	.clear()
+	.color('cyan')
+	.write(art)
+	.color('white')
+	.write('\n\n\n\n\n\n');
+}
+
+var example = new hive.File({path: './' + configFile});
+var config = new hive.File({path: configPath});
+
+// simple errors
+function err(/* str, obj, etc */) {
+	console.log.apply(this, arguments);
+}
+
+// resolve ~/
+function resolve(path) {
+	return path.replace('~', home);
+}
+
+
+function link(sym, source, callback) {
+	console.log(source,sym);
+	var command = 'ln -s ' + source + ' ' + sym;
+	console.log(command);
+	exec(command, null, callback);
+}
+
+// parse the config
+function parse(json) {
+	// strip out the comments
+	json = json.replace(/\/\/.*/g, '');
+	return JSON.parse(json);
+}
+
+// sync based on the config
+function sync(data) {
+	var root = data.root;
+	if(root) {
+		for(var key in data.sync) {
+			if(data.sync.hasOwnProperty(key)) {
+				
+				var dropboxFolder = resolve(root + '/' + key);
+				var localFolder = resolve(data.sync[key]);
+				var localFolderDir = new hive.Dir({path: localFolder});
+				var dropboxFolderDir = new hive.Dir({path: dropboxFolder});
+				var localParent = localFolderDir.dir();
+				
+				//move the local folder to dropbox if it doesnt exist
+				localFolderDir.once('change', function() {
+					if(localFolderDir.get('exists')) {
+						dropboxFolderDir.once('change', function () {
+							if(dropboxFolderDir.get('exists')) {
+								err('Could not sync', dropboxFolder, 'because it already exists in ', root);
+							} else {
+								localFolderDir.move(dropboxFolder, function () {
+									link(localParent, dropboxFolder);
+								});
+							}
+						});
+						dropboxFolderDir.fetch();
+					} else {
+						err('Could not sync ', localFolder, 'because it does not exist');
+					}
+				});
+				localFolderDir.fetch();
+			}
+		}
+	} else {
+		err('Configuration is missing a Dropbox root');
+	}
+}
+
+config
+.once('change', function () {
+	if(config.get('exists')) {
+		var data = parse(config.get('data'));
+		sync(data);
+	} else {
+		example.paste(home);
+	}
+})
+.fetch();
